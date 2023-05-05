@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html style = 'background-color : blueviolet'>
+<head>
+    <style>
+        .title{
+    color: rgb(57, 215, 59);
+    text-align: center;
+    font-size:xx-large;
+    font-family:'Courier New', Courier, monospace;
+}
+
+.image{
+    border-radius:25px;
+}
+
+.buttonFilter{
+    visibility: hidden;
+    width:100px;
+    height:100px;
+    color:greenyellow;
+}
+
+.button
+{
+ color:greenyellow;
+ width:100px;
+ height:100px;
+}
+
+
+    </style>
+    <script>
+        var imageURL = "";
+var amountOfTimesButtonPressed = 0;
+var pixelData;
+var c;
+var ctx;
+var img;
+var imgData;
+
+function getMagnitude()
+{
+  return parseInt(document.getElementById('magnitude').value);
+}
+
+function setImageURL()
+{
+    return document.getElementById("imurl").value;
+}
+
+function changeImage(imageURL)
+{
+    document.getElementById("image").src = imageURL;
+}
+
+function getElement()
+{
+    return document.getElementById("image");
+}
+
+function getImageURL()
+{
+    imageURL = setImageURL();
+    showImage(imageURL,500,500,);
+}
+
+function showImage(ID)
+{
+    var display = document.getElementById(ID);
+    display.style.visibility = "visible";
+}
+
+//functions involved in the filtering process
+
+//credit to https://www.w3schools.com/tags/canvas_putimagedata.asp for getting the
+//canvas and contex (and in combination with a loosley followed post on 
+//stackOverflow)
+function getDataOfImage()
+{
+ //gets the final image element in HTML and stores it as a variable
+ c = document.getElementById("finalImage");
+ ctx = c.getContext("2d");
+ 
+ //stores the image element in HTML as a variable
+ img = document.getElementById("image");
+
+ //draws the image data of the constant image onto the canvas
+ ctx.drawImage(img,0,0);
+ 
+ //stores the RGBA pixel values onto a list of the canvas after pasting the image
+ imgData = ctx.getImageData(0, 0, c.width, c.height);
+}
+
+function getRGBMagnitude(x,y,z)
+{
+    return (x**2 + y**2 + z**2)**0.5;
+}
+
+function average(list)
+{
+    var total = 0;
+    for(var i = 0; i < list.length; i++){
+        total+=list[i];
+    }
+    return total/list.length;
+}
+
+function filterImage(colour, intensity)
+{
+  if(colour >= 0)
+  {
+    getDataOfImage();
+// intensify a specific primary colour by adding that value by the magnitude input
+var i;
+for (i = 0; i < imgData.data.length; i += 4) {
+  imgData.data[i+colour] = imgData.data[i+colour] +intensity;
+  imgData.data[i + 3] = 255;
+}
+}
+
+  else
+  {
+    if(colour === -1)
+  {
+    getDataOfImage();
+    //increases the R and B values of each pixel by intensity
+    for(var i = 0; i < imgData.data.length; i+=4)
+    {
+      imgData.data[i]+=intensity;
+      imgData.data[i+2]+=intensity;
+    }
+  }
+  else if(colour === -2)
+  {
+    getDataOfImage();
+    //Increases the R and G values of each pixel by intensity
+    for(var k = 0; k < imgData.data.length; k+=4)
+    {
+      imgData.data[k]+=intensity;
+      imgData.data[k+1]+=intensity;
+    }
+  }
+  else if(colour === -3)
+  {
+    getDataOfImage();
+    //multiplies each G value by 0.2 and each B value by 0.01
+    for(var j = 0; j < imgData.data.length; j+=4)
+    {
+      imgData.data[j+1] *= 0.2;
+      imgData.data[j+2] *= 0.01
+    } 
+  }
+  
+  
+else if(colour === 'invert')
+{
+getDataOfImage();
+// invert colors by subtracting 255 by the original RGB value
+for (i = 0; i < imgData.data.length; i += 4) {
+  imgData.data[i] = 255-imgData.data[i];
+  imgData.data[i + 1] = 255-imgData.data[i + 1];
+  imgData .data[i + 2] = 255-imgData.data[i + 2];
+  imgData.data[i + 3] = 255;
+}
+}
+
+else if(colour === 'greyscale')
+{
+  getDataOfImage();
+
+// greyscale colors by taking the average of each RGB set and setting that to each of the RGB values of that pixel
+var averageRGBValue;
+for (i = 0; i < imgData.data.length; i += 4) {
+  averageRGBValue = average([imgData.data[i],imgData.data[i+1],imgData.data[i+2]]);
+  imgData.data[i] = averageRGBValue;
+  imgData.data[i+1] = averageRGBValue;
+  imgData.data[i+2] = averageRGBValue;
+  imgData.data[i + 3] = 255;
+}
+console.log(imgData.data);
+}
+
+else if(colour === 'discrete')
+{
+  getDataOfImage();
+
+// make the colour either black or white depending on the magnitude of the pixel values are to a given value
+//Takes the magnitude of the colour vector of each pixel and tests it to a given value
+for (i = 0; i < imgData.data.length; i += 4) {
+  if(getRGBMagnitude(imgData.data[i],imgData.data[i+1],imgData.data[i+2]) >= intensity)
+  {
+    imgData.data[i] = 255;
+    imgData.data[i + 1] = 255;
+    imgData.data[i + 2] = 255;
+  } 
+  else
+  {
+    imgData.data[i] = 0;
+    imgData.data[i+1] = 0;
+    imgData.data[i+2] = 0;
+  }
+  imgData.data[i + 3] = 255;
+}
+console.log(imgData.data);
+}
+
+else if(colour === 'blur')
+{
+ getDataOfImage();
+
+  var AverageListR;
+  var AverageListG;
+  var AverageListB;
+
+  //Makes the RGB values of each pixel the average of the 4 RGB values ahead of it and itself
+  for(i = 0; i < imgData.data.length; i+=4)
+  {
+    AverageListR =average
+    (
+    [imgData.data[i],imgData.data[i+4],imgData.data[i+8],imgData.data[i+12],imgData.data[i+16],imgData.data[i+20]]
+    );
+    AverageListG =average
+    (
+      [imgData.data[i+1],imgData.data[i+5],imgData.data[i+9],imgData.data[(i)+13],imgData.data[i+17],imgData.data[i+21]]
+    );
+    AverageListB =average
+    (
+    [imgData.data[i+2],imgData.data[i+6],imgData.data[i+10],imgData.data[i+14],imgData.data[i+18],imgData.data[i+22]]
+    );
+    
+    /*
+    sets the RGB values of each pixel to the average of the RGB values of the 4 pixels in front of it
+    and itself
+    */
+    imgData.data[i] = AverageListR;
+    imgData.data[i+1] = AverageListG;
+    imgData.data[i+2] = AverageListB;
+    imgData.data[i+3] = 255;
+  }
+console.log(imgData.data);
+}
+
+else if(colour === 'brighten')
+{
+  getDataOfImage();
+
+  //increases each RGB value of the pixel by the magnitude input
+  for(i = 0; i < imgData.data.length; i+=4)
+  {
+    imgData.data[i] += intensity;
+    if(imgData.data[i] > 255)
+    {
+      imgData.data[i] = 255;
+    }
+    imgData.data[i+1] += intensity;
+    if(imgData.data[i+1] > 255)
+    {
+      imgData.data[i+1] = 255;
+    }
+    imgData.data[i+2] += intensity
+    if(imgData.data[i+2] > 255)
+    {
+      imgData.data[i+2] = 255;
+    }
+    imgData.data[i+3] = 255;
+  }
+
+  ctx.putImageData(imgData,0,0);
+}
+
+else if(colour === 'dim')
+{
+  getDataOfImage();
+
+  //subtracts each RGB value by the magnitude input
+  for(var i = 0; i < imgData.data.length; i+=4)
+  {
+    imgData.data[i] -= intensity;
+    if(imgData.data[i] < 0)
+    {
+      imgData.data[i] = 0;
+    }
+    imgData.data[i+1] -= intensity;
+    if(imgData.data[i+1] < 0)
+    {
+      imgData.data[i+1] = 0;
+    }
+    imgData.data[i+2] -= intensity
+    if(imgData.data[i+2] < 0)
+    {
+      imgData.data[i+2] = 0;
+    }
+  }
+
+  ctx.putImageData(imgData,0,0);
+}
+
+//0.4392, 0.2388, 0.0784
+else if(colour === 'sepia')
+{
+  getDataOfImage();
+    //multiplies the RGB value of each pixel by [0.4392, 0.2388, 0.0784] respectively
+    for (i = 0; i < imgData.data.length; i += 4) {
+      imgData.data[i] = (0.4392*imgData.data[i]);
+      imgData.data[i+1] = (0.2388*imgData.data[i+1]);
+      imgData.data[i+2] = (imgData.data[i+2]*0.0784);
+      imgData.data[i+3] = 255;
+    }
+}
+
+//Sets each RGB value's position by the length of the list - the current positionA
+else if(colour === 'flip')
+{
+  getDataOfImage();
+  const DATA = ctx.getImageData(0,0,c.width,c.height).data;
+  var tempList = DATA;
+  for(var i = 0; i < imgData.data.length; i+=4)
+  {
+    imgData.data[i] = tempList[(imgData.data.length-1) - (i+3)];
+    imgData.data[i+1] = tempList[(imgData.data.length-1) - (i+2)];
+    imgData.data[i+2] = tempList[(imgData.data.length-1) - (i+1)];
+    tempList = DATA;
+    imgData.data[i+3] = 255;
+  }
+  console.log(imgData.data);
+  console.log(DATA);
+}
+
+  }
+ctx.putImageData(imgData,0,0);
+//please understand that I am physically inable to show you each for loop
+}
+    </script>
+    <title>Filter Frivilously!</title>
+    <div class = "title"><h1>Frivilous Filtering!</h1></div>
+    <label for="imurl">Image URL:</label>
+    <input type="text" id="imurl" name="imurl"><br><br>
+</head>
+<body>
+    <button id = "displayImageButton" type = "submit" name = "displayImageButton" onclick = 
+    "
+     changeImage(setImageURL());
+     let image = document.getElementById('image');
+     image.width = image.naturalWidth;
+     image.height = image.naturalHeight;
+     document.getElementById('finalImage').width = image.width;
+     document.getElementById('finalImage').height = image.height;
+     showImage('invert');
+     showImage('GreyScale');
+     showImage('blueScale');
+     showImage('redScale');
+     showImage('greenScale');
+     showImage('discrete');
+     showImage('blurImage');
+     showImage('dimImage');
+     showImage('brightenImage');
+     showImage('sepiaFilter');
+     showImage('flipImage');
+     showImage('yellowScale');
+     showImage('purpleScale');
+     showImage('crimsonScale');
+     showImage('labelMAG');
+     showImage('magnitude');
+    ">Click twice to submit image</button>
+    <b1>
+    <div class = "image">
+        <image id = "image" width = 200 height = 200 style = "border: 1px solid #000000;"></image>
+        <canvas id = "finalImage" width = 200 height = 200 style = "border: 1px solid #000000;"></canvas>
+    </div>
+    </b1>
+    <b2>
+        <div class = 'buttonFilter' id = 'buttonFilters'>
+            <button id = 'invert' onclick = 
+            '
+            filterImage("invert",getMagnitude());
+            '>Invert the image</button>
+            <button id = 'GreyScale' onclick = 
+            '
+            filterImage("greyscale",getMagnitude());
+            '>
+            Greyscale the Image</button>
+            <button id = 'blueScale' onclick = 
+            '
+            filterImage(2,getMagnitude());
+            '>Bluescale the image</button>
+            <button id = 'redScale' onclick = 
+            '
+            filterImage(0,getMagnitude());
+            '>Redscale the image</button>
+            <button id = 'greenScale' onclick = 
+            '
+            filterImage(1,getMagnitude());
+            '>Greenscale the image</button>
+
+            <button id = "yellowScale" onclick = "filterImage(-2,getMagnitude()); console.log(getMagnitude());">
+                Yellowscale the image</button>
+
+            <button id = "purpleScale" onclick = "filterImage(-1,getMagnitude());">Purplescale the image</button>
+
+            <button id = "crimsonScale" onclick = "filterImage(-3,getMagnitude());">Crimsonscale the image</button>
+
+            <!--Makes a button that, upon clicked, calls the DiscreteBrightness function based off of the 
+                magnitude intput-->
+            <button id = 'discrete' style = 'position:relative; right:-125px; top : -210px;' 
+            onclick = 'filterImage("discrete",getMagnitude());'>make the image discrete</button>
+
+            <button id = 'blurImage' style = 'position:relative; right:-125px; top : -210px;' onclick = 
+            '
+            filterImage("blur",getMagnitude());
+            '
+            >
+        blur the image</button>
+            <button id = 'dimImage' style = 'position:relative; right:-125px; top : -210px;' onclick = '
+            filterImage("dim",getMagnitude());'
+            >
+            dim the image
+            </button>
+            <button id = 'brightenImage' style = 'position:relative; right:-125px; top : -210px;' onclick = "filterImage('brighten',getMagnitude())"; console.log(getMagnitude())">brighten the image</button>
+            <button id = 'sepiaFilter' style = 'position:relative; right:-125px; top : -210px;' onclick = "filterImage('sepia',getMagnitude());">apply a sepia filter</button>
+            <button id = 'flipImage' style = 'position:relative; right:-125px; top : -210px;' onclick = "filterImage('flip',getMagnitude());">flip the image</button>
+        </div>
+        </b2>
+        <label for = "magnitude" style = "position:relative; top:200px; visibility:hidden;" id = "labelMAG">Severity of your image (for all of the colour scales except crimson and for brightening and dimming the image. Also for setting the cutoff for the discrete filter)</label>
+        <input type = "number" style = "position:relative; top:200px; visibility:hidden" id = "magnitude"></input>
+        <button type = "submit" style = "position:relative; top: 200px;" id = "useImageURL" onclick = 
+        '
+        let canvas = document.getElementById("finalImage");
+
+        const URL = canvas.toDataURL();
+        changeImage(URL);
+        '
+        >use the current imageURL as the new image</button>
+</body>
+</html>
